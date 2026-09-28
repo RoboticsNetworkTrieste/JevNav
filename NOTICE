@@ -1,0 +1,16 @@
+JEVNAV
+Copyright 2026 The JEVNAV authors
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This project uses, but does not include or redistribute, third-party components that keep
+their own licenses:
+
+- ir-sim (https://github.com/hanruihua/ir-sim) — MIT, Copyright 2022 Ruihua Han
+- Rizzo Flow (https://github.com/Rizzo-AI-Academy/rizzo-flow) — Apache-2.0,
+  Copyright 2026 Simone Rizzo — Rizzo AI Academy
+- The model weights and the llama.cpp runtime that Rizzo Flow downloads
+  (Spark-X2.5-4B, Qwen3-VL-4B-Instruct, llama.cpp), each under its own license
+
+"Jev" and "TypeSafe" are names of TypeSafe's products; this project is independent and not
+affiliated.

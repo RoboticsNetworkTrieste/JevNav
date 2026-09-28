@@ -1,0 +1,41 @@
+world:
+  height: 8
+  width: 14
+  step_time: 0.1
+  sample_time: 0.1
+  offset: [0, 0]
+  collision_mode: 'stop'
+  control_mode: 'auto'
+
+robot:
+  - kinematics: {name: 'diff'}
+    shape: {name: 'circle', radius: 0.2}
+    state: [1, 4, 0]
+    goal: [13, 4, 0]
+    goal_threshold: 0.3
+    vel_max: [0.25, 0.7854]
+    vel_min: [-0.25, -0.7854]
+    sensors:
+      - name: 'lidar2d'
+        range_min: 0
+        range_max: 5
+        angle_range: 6.2832
+        number: 180
+        noise: False
+        plot:
+          alpha: 0.15
+    plot:
+      show_trajectory: True
+      traj_width: 0.04
+      traj_alpha: 0.9
+      show_goal: True
+
+obstacle:
+  - shape: {name: 'rectangle', length: 0.4, width: 5.0}
+    state: [4, 5.5, 0]
+  - shape: {name: 'rectangle', length: 0.4, width: 5.0}
+    state: [7, 2.5, 0]
+  - shape: {name: 'rectangle', length: 0.4, width: 5.0}
+    state: [10, 5.5, 0]
+  - shape: {name: 'linestring', vertices: [[0, 0], [14, 0], [14, 8], [0, 8], [0, 0]]}
+    state: [0, 0, 0]
