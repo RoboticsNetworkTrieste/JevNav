@@ -77,7 +77,7 @@ of the fork below adds the vision backend that `--evidence image` needs; upstrea
 enough for the other modes.
 
 ```bash
-git clone -b vlm-costmap-image https://github.com/RoboticsNetworkTrieste/rizzo-flow.git external/rizzo-flow
+git clone -b vlm-costmap-image https://github.com/CarloDnt/rizzo-flow.git external/rizzo-flow
 cd external/rizzo-flow
 uv sync --locked
 uv run rizzo download       # llama.cpp runtime + Spark-X2.5-4B Q8_0, about 4.4 GB
