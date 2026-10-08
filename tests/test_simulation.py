@@ -82,7 +82,7 @@ def test_route_to_go_does_not_jump_to_a_nearby_later_leg(commands):
     assert outlooks["FL75"].route_to_go > 5.0
 
 
-def test_rizzo_gets_one_choice_question_with_the_results(commands):
+def test_the_model_gets_one_choice_question_with_the_results(commands):
     request = simulation_request(commands, wall=0.6)
     body = JevDecider().request_body(request)
     question = body["questions"]["command"]
@@ -96,7 +96,7 @@ class NeverCalled:
     name = "never"
 
     def decide(self, request):
-        raise AssertionError("Rizzo must not be asked when no command is safe")
+        raise AssertionError("The model must not be asked when no command is safe")
 
 
 def test_no_safe_command_means_a_safety_stop_without_asking(env_factory, monkeypatch):

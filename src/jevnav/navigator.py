@@ -8,7 +8,7 @@ from statistics import median
 
 import numpy as np
 
-from .commands import Command, command_set
+from .commands import DIRECTION_STEP_DEGREES, Command, command_set
 from .costmap import CostmapSpec, LocalCostmap, Scan, build_costmap
 from .costmap_image import CELL_PIXELS, check_cell
 from .deciders import SAFETY, Decider, Decision, safety_stop
@@ -199,10 +199,20 @@ class Navigator:
         if self.config.sim_latency:
             return self._hold_for(self.config.sim_latency)
         self.hold = 1.0
-        request = self._compose(-1, self.pose)
-        latencies = [self._decide(request).latency for _ in range(self.config.warmup_requests)]
+        latencies = [self._decide(self._compose(-1, pose)).latency for pose in self._warmup_poses()]
         self.report.warmup_latencies = latencies
         return self._hold_for(median(latencies))
+
+    def _warmup_poses(self) -> list[np.ndarray]:
+        turn = math.radians(DIRECTION_STEP_DEGREES)
+        offsets = [
+            0,
+            *(sign * k for k in range(1, self.config.warmup_requests) for sign in (1, -1)),
+        ]
+        return [
+            self.pose + np.array([0.0, 0.0, turn * offset])
+            for offset in offsets[: self.config.warmup_requests]
+        ]
 
     def _hold_for(self, latency: float) -> float:
         if self.config.hold:

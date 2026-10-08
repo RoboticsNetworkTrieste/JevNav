@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
+from jevnav.cli import main
 from jevnav.costmap_image import CELL_PIXELS, check_cell, image_tokens, png_base64, render
 from jevnav.deciders import HeuristicDecider, JevDecider
 from jevnav.navigator import Navigator, NavigatorConfig
@@ -94,3 +95,12 @@ def test_heuristic_reaches_the_goal_through_the_image_pipeline(env_factory):
     assert report.safety_stops == 0
     assert all(record.image_png for record in report.decisions)
     assert report.trace()[0]["image_png"] == report.decisions[0].image_png
+
+
+@pytest.mark.parametrize("command", [["run", "open"], ["bench", "open", "--deciders", "jev"]])
+def test_image_evidence_is_refused_for_the_text_only_model(command, capsys):
+    unreachable = ["--jev-url", "http://127.0.0.1:9", "--timeout", "0.1"]
+    assert main([*command, "--evidence", "image", *unreachable]) == 2
+    error = capsys.readouterr().err
+    assert "CLM v0.1 reads text only" in error
+    assert "No Jev-compatible server" not in error

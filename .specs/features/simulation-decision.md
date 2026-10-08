@@ -2,13 +2,14 @@
 
 ## Goal
 
-Rizzo decides the way it plays Snake. The simulator computes what each of the 24 commands
-would do; the model only chooses. Every command is simulated for the hold from the pose where
-it would start. Commands that would collide are removed. For each safe one, Rizzo reads where
+CLM decides with "Snake logic": the simulator computes what each of the 24 commands would
+do; the model only chooses. Every command is simulated for the hold from the pose where
+it would start. Commands that would collide are removed. For each safe one, CLM reads where
 the command would leave the robot: how far it would still be from the goal, along the planned
 route and in a straight line, how far off the route it would be, and how close the nearest
-obstacle would be. Then it picks one command. `grid` and `text` stay unchanged for comparison. `--evidence image`
-runs this same pipeline and adds the costmap as a picture (features/image-evidence.md).
+obstacle would be. Then it picks one command. `grid` and `text` stay unchanged for comparison.
+`--evidence image` runs this same pipeline and adds the costmap as a picture; it is dormant
+until a vision CLM exists (features/image-evidence.md).
 
 ## Flow
 
@@ -19,15 +20,17 @@ flowchart TD
         K["24 commands<br/>(features/command-set.md)"] --> ROLL
         ROLL --> SAFE{"Hard safety filter<br/>exact lidar hits · robot disc"}
         SAFE -->|"collision · clearance under 0.05 m ·<br/>outside velocity limits"| DROP["Removed, reason recorded"]
-        SAFE -->|"none safe"| STOP["Safety stop: v = 0, ω = 0<br/>Rizzo is not called"]
+        SAFE -->|"none safe"| STOP["Safety stop: v = 0, ω = 0<br/>CLM is not called"]
         SAFE -->|"safe"| RES["Results per safe command, all at its end pose:<br/>route still to go · distance off the route<br/>· straight-line goal distance · closest obstacle"]
         R["Global A* route + goal"] --> RES
     end
-    subgraph rizzo["Rizzo · one choice"]
+    subgraph model["CLM · one choice"]
         EV["state: robot, rule"]
         Q["choice question: one option per safe command<br/>its motion + its results, shuffled"]
-        EV --> P["24 or fewer probabilities"]
-        Q --> P
+        EV --> SV["state vector: state + question, one embedding"]
+        Q --> AV["one embedding per option text, each on its own"]
+        SV --> P["24 or fewer probabilities<br/>softmax of the scaled cosines"]
+        AV --> P
     end
     subgraph act["Deterministic · execution"]
         P --> FV{"Final validation at the hold end<br/>actual pose · actual H · latest scan"}
@@ -67,7 +70,10 @@ numbers):
 
 - **Why the results sit in the options.** In Snake the per-move sensors are in the state and
   the options only name the move, which works with 3 moves. Here there are up to 24, so each
-  option carries its own results and the model can compare them without matching IDs.
+  option carries its own results. For CLM this is also the only place they can go: it scores
+  each option text against the state on its own, so an option is judged by what its own text
+  says. It never reads two options side by side, so it cannot subtract one option's distance
+  to go from another's; whether the embedding orders such numbers is what this mode tests.
 - **Closest obstacle** is measured at the command's end pose: the distance from the robot's
   centre to the lidar hits and hit-joining segments, minus the robot radius. The safety filter
   computes it next to its own minimum over the whole command, which still decides what is
@@ -89,7 +95,7 @@ numbers):
 
 - The filter uses the scan the evidence is built from. Final validation re-simulates the
   chosen command from the actual pose over the actual H, against the latest scan. It walks
-  Rizzo's probabilities in order and skips anything outside the offered set.
+  the model's probabilities in order and skips anything outside the offered set.
 - A safety stop holds v = 0, ω = 0 for the current H. Its zero latency neither updates H nor
   enters the latency median.
 - Unknown space is not a hard constraint: only observed obstacles are.
@@ -104,15 +110,15 @@ uv run jevnav run slalom --decider heuristic --evidence simulation   # baseline 
 
 The report adds `safety_stops` and `validation_fallbacks`. Each trace record adds `removed`
 (the reason for each unsafe command), `fallbacks` (ranked commands skipped at validation) and
-`option_texts` (every option exactly as Rizzo read it); `ranking` and `executed` show when
+`option_texts` (every option exactly as CLM read it); `ranking` and `executed` show when
 validation changed the choice.
 
 ## Notes
 
 - **Rotations show the robot's current values.** Rotating in place changes none of the
   distances, so L and R report where the robot already is; moving away from an
-  obstacle reports more clearance than they do. The state gives no "now" values, so Rizzo
-  judges progress only by comparing the options. Heading is not among the results (decided
+  obstacle reports more clearance than they do. The state gives no "now" values, so the model
+  judges progress only from the options' own numbers. Heading is not among the results (decided
   2026-09-24).
 - **Behind the route's start**, a reverse shows the same route still to go as a rotation,
   because the projection stops at the route's first point. The distance off the route and
@@ -122,7 +128,7 @@ validation changed the choice.
   being evaluated. Their sources were archived only in a temporary session scratchpad and are
   no longer available; they never reached git.
 - The heuristic baseline reads the same costmap and scores progress along the visible route
-  with small penalties. On the same safe set, it and Rizzo should mostly agree when Rizzo
+  with small penalties. On the same safe set, it and CLM should mostly agree when CLM
   follows the rule.
 
 ## Decisions (2026-09-24)
@@ -131,7 +137,7 @@ validation changed the choice.
   change from now. No off-route distance or heading.
 - Closest obstacle added to every option (2026-09-24, requested after the first runs), with a
   rule to prefer more clearance among commands with similar progress.
-- Colliding commands are removed before Rizzo, not labeled.
+- Colliding commands are removed before the model, not labeled.
 - The geometry mode is replaced; `grid` and `text` stay.
 - No offline benchmark: the mode is evaluated with live runs.
 
@@ -141,7 +147,7 @@ validation changed the choice.
   "Now" line in the state.
 - Closest obstacle is measured at the end pose, not as the minimum along the command. The
   minimum included the start pose, so no command could report more clearance than a rotation
-  in place; with the instruction "stay far from obstacles" Rizzo kept rotating.
+  in place; with the instruction "stay far from obstacles" the model kept rotating.
 - Distance off the route added to every option, ranked after progress and before clearance.
   This reverses 2026-09-24's "no off-route distance": route still to go alone did not show
   how far a command strays from the route. Progress stays first because a rotation in place

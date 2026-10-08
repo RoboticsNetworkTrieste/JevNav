@@ -2,10 +2,10 @@
 
 ## Goal
 
-Describe the same local costmap to Rizzo in words and coordinates instead of an ASCII grid:
+Describe the same local costmap to CLM in words and coordinates instead of an ASCII grid:
 the robot's pose and heading, the goal, the planned path and the obstacle points in the
-window, all relative to the robot. It tests whether the 4B model, which does not read a grid
-spatially, decides better from coordinates. Selected with `--evidence text`; the grid stays
+window, all relative to the robot. It tests whether the model decides better from coordinates than
+from a grid. Selected with `--evidence text`; the grid stays
 the default.
 
 ## Flow
@@ -23,10 +23,10 @@ flowchart TD
     GO --> TXT
     PA --> TXT
     OB --> TXT
-    GRID --> ST["state field of the Rizzo request"]
+    GRID --> ST["state field of the CLM request"]
     TXT --> ST
     SEL -->|"text"| IN["Instructions in words:<br/>follow the path · closer than the radius is a collision ·<br/>keep 0.6 m when you can"]
-    IN --> Q["instructions field of the Rizzo request"]
+    IN --> Q["instructions field of the CLM request"]
 ```
 
 ## Robot frame
@@ -77,36 +77,17 @@ obstacle point when you can.
 - **Token cost grows with the obstacles** (measured 2026-09-24, 12 maps from the three
   scenarios, warm server): about 9 tokens per obstacle point, instead of a fixed 141 tokens
   for the grid. Scenarios show 0–43 points per map, 23 at the median in `open` and `slalom`.
-
-  | Evidence | Input tokens p50 | Latency p50 | 35–41 obstacle points |
-  | --- | ---: | ---: | --- |
-  | grid | 995 | 1.25 s | 1,014–1,022 tokens, 1.28 s |
-  | text | 1,082 | 1.40 s | 1,282–1,292 tokens, 1.71–1.72 s |
-
-  Crowded maps therefore get longer holds (up to about 2.1 s instead of 1.5 s).
+  With CLM only the state is embedded at every decision, so crowded maps cost a longer
+  encoder pass and, through the adaptive hold, a longer hold.
 - The HeuristicDecider ignores the evidence text (it reads the LocalCostmap), so its results
   are the same with `grid` and `text`. With `simulation` or `image` it chooses among the safe
   commands only, and its choice is revalidated.
 - Reports and `bench` tables record the evidence mode, so grid and text runs can be compared.
 
-## Results (2026-09-24, seeds 0–2, `runs/exp1-text.json` and `runs/exp1-grid.json`)
+## Results
 
-Run back to back with a fresh grid benchmark in the same thermal state. Progress is the
-closest approach to the goal as a share of the start distance.
-
-| Scenario | Rizzo · text | Rizzo · grid (same session) |
-| --- | --- | --- |
-| open | 0/3, mean progress 10% | 0/3, 21% |
-| slalom | 0/3, 21% | 0/3, 14% |
-| crossing | 0/3, 10% | 0/3, 22% |
-
-- No difference beyond noise. The same seed doesn't reproduce: text `slalom` seed 1 went
-  18.8 m in the benchmark and 7.0 m in a rerun, because a 0.1 s shift in one command switch
-  changes the rest of the run.
-- Chosen commands: text F 42%, backward 32%; grid F 34–38%, backward 35–37%. The heuristic
-  chose backward once in 204 decisions.
-- The same map can get a clearly wrong answer: with the path straight ahead and every
-  obstacle within 1 m behind, Rizzo chose BL45 (p 0.46) twice in a row.
+- None with CLM yet. Results with the previous model server (2026-09-24) are in git history
+  before 2026-10-05.
 
 ## Open Questions
 

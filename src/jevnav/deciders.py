@@ -15,8 +15,8 @@ from .route import Route
 from .safety import SAFETY_STOP
 
 QUESTION_ID = "command"
-DEFAULT_JEV_URL = "http://127.0.0.1:8017"
-DEFAULT_JEV_MODEL = "rizzo-latest"
+DEFAULT_JEV_URL = "http://127.0.0.1:8700"
+DEFAULT_JEV_MODEL = "clm-latest"
 SAFETY = "safety"
 
 

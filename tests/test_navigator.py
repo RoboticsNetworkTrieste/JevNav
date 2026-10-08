@@ -85,6 +85,30 @@ def test_warm_up_sets_the_hold_from_the_measured_latency(env_factory):
     assert report.hold == pytest.approx(1.2)
 
 
+class RecordingDecider(ScriptedDecider):
+    def __init__(self, latency: float):
+        super().__init__(latency)
+        self.requests = []
+
+    def decide(self, request):
+        self.requests.append(request)
+        return super().decide(request)
+
+
+@pytest.mark.parametrize("evidence", list(EvidenceFormat))
+def test_warm_up_requests_differ_so_a_caching_server_cannot_answer_from_cache(
+    env_factory, evidence
+):
+    config = NavigatorConfig(evidence_format=evidence, base_time_limit=0.5, time_limit_factor=0.0)
+    decider = RecordingDecider(latency=1.0)
+    Navigator(env_factory("open"), decider, config, scenario="open").run()
+    warm_up = [request for request in decider.requests if request.index == -1]
+    assert len(warm_up) == config.warmup_requests
+    assert len({request.costmap.pose[2] for request in warm_up}) == len(warm_up)
+    texts = [(request.evidence, tuple(sorted(request.criteria().items()))) for request in warm_up]
+    assert len(set(texts)) == len(warm_up)
+
+
 def test_request_lists_all_commands_in_a_seeded_shuffle(wall_costmap, commands):
     first = compose(0, 0, wall_costmap, commands, 1.7, np.random.default_rng(7))
     again = compose(0, 0, wall_costmap, commands, 1.7, np.random.default_rng(7))

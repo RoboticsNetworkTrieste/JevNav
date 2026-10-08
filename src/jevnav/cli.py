@@ -19,9 +19,13 @@ from .report import aggregate
 from .scenario import available_scenarios, open_env, resolve_scenario
 
 CLOSE_PAUSE = 0.01
-START_RIZZO_HINT = (
-    "Start Rizzo Flow first, from its checkout:\n"
-    "  uv run rizzo serve            (add --vision for --evidence image)"
+START_CLM_HINT = (
+    "Start CLM and its Qwen3-8B encoder first (see README, Model server):\n"
+    "  scripts/serve-clm.sh          (encoder on :8090, CLM on :8700)"
+)
+IMAGE_NEEDS_VISION = (
+    "--evidence image needs a server that reads images. CLM v0.1 reads text only and drops "
+    "the image, so this mode waits for a vision CLM; --decider heuristic runs its pipeline"
 )
 
 
@@ -30,7 +34,7 @@ def main(argv=None) -> int:
     try:
         return args.handler(args)
     except JevUnavailable as error:
-        print(f"jevnav: {error}\n{START_RIZZO_HINT}", file=sys.stderr)
+        print(f"jevnav: {error}\n{START_CLM_HINT}", file=sys.stderr)
         return 2
     except (FileNotFoundError, ValueError) as error:
         print(f"jevnav: {error}", file=sys.stderr)
@@ -99,8 +103,8 @@ def _decision_options(parser) -> None:
         "--evidence",
         choices=[value.value for value in EvidenceFormat],
         default=EvidenceFormat.GRID.value,
-        help="what Rizzo reads: the ASCII costmap, its coordinates, each command's simulation, "
-        "or that simulation with the costmap as an image (needs `rizzo serve --vision`)",
+        help="what the model reads: the ASCII costmap, its coordinates, each command's "
+        "simulation, or that simulation with the costmap as an image (waits for a vision CLM)",
     )
     parser.add_argument(
         "--image-cell",
@@ -132,6 +136,8 @@ def _decision_options(parser) -> None:
 def _decider(name: str, args):
     if name == "heuristic":
         return HeuristicDecider(latency=args.heuristic_latency)
+    if args.evidence == EvidenceFormat.IMAGE:
+        raise ValueError(IMAGE_NEEDS_VISION)
     decider = JevDecider(args.jev_url, args.model, os.environ.get(args.api_key_env), args.timeout)
     decider.served_models()
     return decider

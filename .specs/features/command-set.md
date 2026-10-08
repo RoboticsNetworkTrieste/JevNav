@@ -2,7 +2,7 @@
 
 ## Goal
 
-Rizzo always chooses among the same 24 motion commands for a differential-drive robot. Each
+CLM always chooses among the same 24 motion commands for a differential-drive robot. Each
 command is a **direction of travel** around the robot:
 - four full commands: forward, backward, and rotate in place left or right;
 - partial turns every 15° in between.
@@ -57,10 +57,10 @@ For a travel direction ψ relative to the nose (left positive, 15° steps):
 
 ω_max = **45°/s** (π/4 rad/s), lowered from 90°/s on 2026-09-24. Speed and turn rate come from
 the robot's `vel_max` in the scenario YAML. Each command is held for its hold time H = 1.2 ×
-Rizzo's latency (see features/rizzo-decision.md), about 1.8 s on the M5: in one hold the
+the model's latency (see features/model-decision.md); with H = 1.8 s, in one hold the
 robot drives 0.45 m, and L / R rotate 81°.
 
-| ID | travel direction | v (m/s) | ω (°/s) | ω (rad/s) | nose turn in a 1.8 s hold | turn radius | text sent to Rizzo |
+| ID | travel direction | v (m/s) | ω (°/s) | ω (rad/s) | nose turn in a 1.8 s hold | turn radius | text sent to CLM |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | F | 0° | +0.25 | 0 | 0 | 0° | straight | Full forward: straight ahead. |
 | FL15 | +15° | +0.25 | +7.5 | +0.131 | +13.5° | 1.91 m | Forward, curving left 7.5 degrees per second. |
@@ -91,14 +91,14 @@ robot drives 0.45 m, and L / R rotate 81°.
 
 - Generated from `commands.py`; the table and the code must stay identical.
 - The speed (0.25 m/s) and the rotation rate (45°/s) are stated once, in the question
-  instructions (`grid`, `text`) or in the state (`simulation`, `image`), not in every option.
-  Compact texts save about 260 tokens: 0.15 s per decision with one costmap (see
-  features/rizzo-decision.md).
+  instructions (`grid`, `text`) or in the state (`simulation`, `image`), not in every option. CLM
+  embeds each option text on its own and caches it, so with `grid` and `text` the 24 texts
+  cost nothing after the first decision (see features/model-decision.md).
 - With `grid` and `text` evidence the IDs and texts are identical at every decision; only
   their order is shuffled. `simulation` and `image` offer only the safe commands, each text
   followed by its simulated results (features/simulation-decision.md).
 - There is no stop command among the 24. The safety stop (v = 0, ω = 0) of `simulation` and
-  `image` is never offered to Rizzo.
+  `image` is never offered to the model.
 - 24 rather than the 22 first requested: with F, L, B and R all included and even spacing,
   the count must be a multiple of 4 (confirmed 2026-09-24).
 

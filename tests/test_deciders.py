@@ -45,7 +45,7 @@ class StubServer:
                 self._reply(stub.answer(stub.requests[-1]))
 
             def do_GET(self):
-                self._reply({"data": [{"id": "rizzo-stub"}]})
+                self._reply({"data": [{"id": "clm-stub"}]})
 
             def _reply(self, payload):
                 body = json.dumps(payload).encode()
@@ -76,7 +76,7 @@ def systemone_answer(choice):
             key: (0.9 if key == choice else 0.1 / (len(criteria) - 1)) for key in criteria
         }
         return {
-            "model": "rizzo-stub",
+            "model": "clm-stub",
             "answers": {
                 "command": {
                     "type": "choice",
@@ -95,13 +95,13 @@ def test_jev_decider_speaks_the_systemone_wire_format(close_wall_request):
     stub = StubServer(systemone_answer("FL30"))
     try:
         decider = JevDecider(stub.url)
-        assert decider.served_models() == ["rizzo-stub"]
+        assert decider.served_models() == ["clm-stub"]
         decision = decider.decide(close_wall_request)
     finally:
         stub.close()
     body = stub.requests[0]
     question = body["questions"]["command"]
-    assert body["model"] == "rizzo-latest"
+    assert body["model"] == "clm-latest"
     assert body["state"] == close_wall_request.evidence
     assert question["type"] == "choice"
     assert list(question["criteria"]) == [command.id for command in close_wall_request.options]
@@ -110,7 +110,7 @@ def test_jev_decider_speaks_the_systemone_wire_format(close_wall_request):
     assert decision.command_id == "FL30"
     assert decision.probabilities["FL30"] == pytest.approx(0.9)
     assert decision.input_tokens == 955
-    assert decision.served_by == "rizzo-stub"
+    assert decision.served_by == "clm-stub"
     assert decision.latency > 0
 
 
